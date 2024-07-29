@@ -1,15 +1,26 @@
-<script setup>
+<script lang="ts">
 import { ref } from 'vue';
-import { blockchain_chat_backend } from 'declarations/blockchain_chat_backend/index';
-let greeting = ref('');
+import { blockchain_chat_backend } from '../../declarations/blockchain_chat_backend';
 
-async function handleSubmit(e) {
-  e.preventDefault();
-  const target = e.target;
-  const name = target.querySelector('#name').value;
-  await blockchain_chat_backend.greet(name).then((response) => {
-    greeting.value = response;
-  });
+export default {
+  data() {
+    return {
+      newNote: "",
+      notes: [] as string[],
+    }
+  },
+  methods: {
+    async addNote() {
+      await blockchain_chat_backend.add_note(this.newNote);
+      await this.downloadNotes();
+    },
+    async downloadNotes() {
+      this.notes = await blockchain_chat_backend.get_notes()
+    }
+  },
+  mounted() {
+    this.downloadNotes()
+  }
 }
 </script>
 
@@ -18,11 +29,15 @@ async function handleSubmit(e) {
     <img src="/logo2.svg" alt="DFINITY logo" />
     <br />
     <br />
-    <form action="#" @submit="handleSubmit">
-      <label for="name">Enter your name: &nbsp;</label>
-      <input id="name" alt="Name" type="text" />
-      <button type="submit">Click Me!</button>
-    </form>
-    <section id="greeting">{{ greeting }}</section>
+    <div>
+      {{ notes }}
+    </div>
+    <div>
+      <textarea v-model="newNote" placeholder="Add new note..."></textarea>
+      <button @click="addNote()">Add new note</button>
+    </div>
+    <div>
+      {{ newNote }}
+    </div>
   </main>
 </template>
