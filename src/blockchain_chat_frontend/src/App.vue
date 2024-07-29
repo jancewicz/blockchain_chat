@@ -1,12 +1,15 @@
 <script lang="ts">
-import { ref } from 'vue';
+import { HttpAgent } from '@dfinity/agent';
 import { blockchain_chat_backend } from '../../declarations/blockchain_chat_backend';
+import { AuthClient } from '@dfinity/auth-client';
+import type { Identity } from '@dfinity/agent';
 
 export default {
   data() {
     return {
       newNote: "",
       notes: [] as string[],
+      identity: undefined as undefined | Identity,
     }
   },
   methods: {
@@ -15,11 +18,23 @@ export default {
       await this.downloadNotes();
     },
     async downloadNotes() {
-      this.notes = await blockchain_chat_backend.get_notes()
+      this.notes = await blockchain_chat_backend.get_notes();
+    },
+    async logIn(){
+      const authClient = await AuthClient.create();
+      await authClient.login({
+        identityProvider: "http://avqkn-guaaa-aaaaa-qaaea-cai.localhost:4943/"
+      });
+
+      const identity = authClient.getIdentity();
+      console.log(`User has logged in: ${identity.getPrincipal()}`);
+      this.identity = identity;
+      // user personal id -> You can take id or use this identity to authorize
+      // const agent = new HttpAgent({identity} );
     }
   },
   mounted() {
-    this.downloadNotes()
+    this.downloadNotes();
   }
 }
 </script>
@@ -29,6 +44,10 @@ export default {
     <img src="/logo2.svg" alt="DFINITY logo" />
     <br />
     <br />
+    <div>
+      {{ identity?.getPrincipal() }}
+      <button @click="logIn()">Log In</button>
+    </div>
     <div>
       {{ notes }}
     </div>
