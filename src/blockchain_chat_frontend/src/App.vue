@@ -59,13 +59,14 @@ export default {
     async logIn(){
       const authClient = await AuthClient.create();
       await authClient.login({
-        identityProvider: "http://avqkn-guaaa-aaaaa-qaaea-cai.localhost:4943/"
-      });
-
-      const identity = authClient.getIdentity();
-      this.principal = identity.getPrincipal();
-      this.identity = identity;
-      await this.downloadChatMessages();
+        identityProvider: "http://avqkn-guaaa-aaaaa-qaaea-cai.localhost:4943/",
+        onSuccess: async () => {
+          const identity = authClient.getIdentity();
+          this.principal = identity.getPrincipal();
+          this.identity = identity;
+          await this.downloadChatMessages();
+        }
+      })
     }
   },
 }
