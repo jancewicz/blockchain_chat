@@ -64,7 +64,6 @@ export default {
           const identity = authClient.getIdentity();
           this.principal = identity.getPrincipal();
           this.identity = identity;
-          await this.downloadChatMessages();
         }
       })
     }
