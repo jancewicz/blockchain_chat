@@ -1,5 +1,4 @@
 <script lang="ts">
-import { HttpAgent, verify } from '@dfinity/agent';
 import { blockchain_chat_backend, canisterId, createActor } from '../../declarations/blockchain_chat_backend';
 import { AuthClient } from '@dfinity/auth-client';
 import type { Identity } from '@dfinity/agent';
@@ -8,27 +7,54 @@ import { Principal } from '@dfinity/principal';
 export default {
   data() {
     return {
-      newNote: "",
-      notes: [] as string[][],
+      newMessage: "",
+      chats: [] as string[][],
       identity: undefined as undefined | Identity,
-      principalName: "",
+      principal: undefined as undefined | Principal,
+      targetPrincipal: "",
     }
   },
   methods: {
-    verifyUser() {
-      if(!this.identity || this.identity.getPrincipal() === Principal.anonymous()) {
+    isLogged(){
+      if(!this.identity || !this.principal ||this.principal === Principal.anonymous()) {
         throw new Error("User is not logged in");
       }
+      return {
+        identity: this.identity,
+        principal: this.principal
+      }
     },
-    async addNote() {
-      this.verifyUser();
-      const backend = createActor(canisterId, {agentOptions: {identity: this.identity}});
-      await backend.add_note(this.newNote);
-      await this.downloadNotes();
+    validateTargetPrincipal(){
+      const trimTargetPrincipal = this.targetPrincipal.trim()
+      if(trimTargetPrincipal === "" ) {
+        throw new Error("Principal not given");
+      }
+      const targetPrincipal = Principal.fromText(trimTargetPrincipal);
+      if(!targetPrincipal || targetPrincipal === Principal.anonymous()) {
+        throw new Error("Wrong target");
+      }
+      return targetPrincipal;
     },
-    async downloadNotes() {
-      this.verifyUser();
-      this.notes = await blockchain_chat_backend.get_notes(this.identity!.getPrincipal());
+    getAuthClient(){
+      this.isLogged();
+      return createActor(canisterId, {
+        agentOptions: {
+          identity: this.identity
+        }});
+    },
+    async addChatMessage() {
+      const targetPrincipal = this.validateTargetPrincipal();
+      const backend = this.getAuthClient();
+      
+      await backend.add_chat_message(this.newMessage, targetPrincipal);
+      await this.downloadChatMessages();
+    },
+    async downloadChatMessages() {
+      const {identity, principal} = this.isLogged();
+      const targetPrincipal = this.validateTargetPrincipal();
+      
+      const chatPath = [identity.getPrincipal(), targetPrincipal].sort();
+      this.chats = await blockchain_chat_backend.get_chat(chatPath);
     },
     async logIn(){
       const authClient = await AuthClient.create();
@@ -37,10 +63,9 @@ export default {
       });
 
       const identity = authClient.getIdentity();
-      console.log(`User logged in ${identity}`)
+      this.principal = identity.getPrincipal();
       this.identity = identity;
-      this.principalName = identity.getPrincipal().toText();
-      this.downloadNotes();
+      await this.downloadChatMessages();
     }
   },
 }
@@ -53,18 +78,21 @@ export default {
     <br />
     <div id="main-container">
       <div id="log-in">
-        {{ principalName }}
+        {{ principal }}
         <button @click="logIn()">Log In</button>
       </div>
-      <div id="notes" v-for="note, idx in notes[0]" :key="idx">
-        <span>{{idx + 1 }}</span>: <span>{{ note }}</span>
+      <div>
+        <input v-model="targetPrincipal"  placeholder="download chat"><button @click="downloadChatMessages">Get chat</button>
+      </div>
+      <div id="notes" v-for="chat, idx in chats[0]" :key="idx">
+        <span>{{idx + 1 }}</span>: <span>{{ chat }}</span>
       </div>
       <div id="add-note-container">
-        <textarea v-model="newNote" placeholder="Add new note..."></textarea>
-        <button @click="addNote()">Add new note</button>
+        <textarea v-model="newMessage" placeholder="Add new message..."></textarea>
+        <button @click="addChatMessage()">Add new message</button>
       </div>
       <div>
-        {{ newNote }}
+        {{ newMessage }}
       </div>
   </div>
   </main>
