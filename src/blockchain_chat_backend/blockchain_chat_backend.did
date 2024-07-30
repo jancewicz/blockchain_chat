@@ -1,6 +1,6 @@
 service : {
-    "get_chat" : (Principal) -> (opt vec text) query;
+    "get_chat" : (principal) -> (opt vec text) query;
     "get_notes" : (principal) -> (opt vec text) query;
     "add_note" : (text) -> ();
-    "add_chat_message" : (text, Principal) -> ();
+    "add_chat_message" : (text, principal) -> ();
 };
