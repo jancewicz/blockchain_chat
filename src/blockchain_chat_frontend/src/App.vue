@@ -1,24 +1,34 @@
 <script lang="ts">
-import { HttpAgent } from '@dfinity/agent';
-import { blockchain_chat_backend } from '../../declarations/blockchain_chat_backend';
+import { HttpAgent, verify } from '@dfinity/agent';
+import { blockchain_chat_backend, canisterId, createActor } from '../../declarations/blockchain_chat_backend';
 import { AuthClient } from '@dfinity/auth-client';
 import type { Identity } from '@dfinity/agent';
+import { Principal } from '@dfinity/principal';
 
 export default {
   data() {
     return {
       newNote: "",
-      notes: [] as string[],
+      notes: [] as string[][],
       identity: undefined as undefined | Identity,
+      principalName: "",
     }
   },
   methods: {
+    verifyUser() {
+      if(!this.identity || this.identity.getPrincipal() === Principal.anonymous()) {
+        throw new Error("User is not logged in");
+      }
+    },
     async addNote() {
-      await blockchain_chat_backend.add_note(this.newNote);
+      this.verifyUser();
+      const backend = createActor(canisterId, {agentOptions: {identity: this.identity}});
+      await backend.add_note(this.newNote);
       await this.downloadNotes();
     },
     async downloadNotes() {
-      this.notes = await blockchain_chat_backend.get_notes();
+      this.verifyUser();
+      this.notes = await blockchain_chat_backend.get_notes(this.identity!.getPrincipal());
     },
     async logIn(){
       const authClient = await AuthClient.create();
@@ -27,15 +37,12 @@ export default {
       });
 
       const identity = authClient.getIdentity();
-      console.log(`User has logged in: ${identity.getPrincipal()}`);
+      console.log(`User logged in ${identity}`)
       this.identity = identity;
-      // user personal id -> You can take id or use this identity to authorize
-      // const agent = new HttpAgent({identity} );
+      this.principalName = identity.getPrincipal().toText();
+      this.downloadNotes();
     }
   },
-  mounted() {
-    this.downloadNotes();
-  }
 }
 </script>
 
@@ -44,19 +51,21 @@ export default {
     <img src="/logo2.svg" alt="DFINITY logo" />
     <br />
     <br />
-    <div>
-      {{ identity?.getPrincipal() }}
-      <button @click="logIn()">Log In</button>
-    </div>
-    <div>
-      {{ notes }}
-    </div>
-    <div>
-      <textarea v-model="newNote" placeholder="Add new note..."></textarea>
-      <button @click="addNote()">Add new note</button>
-    </div>
-    <div>
-      {{ newNote }}
-    </div>
+    <div id="main-container">
+      <div id="log-in">
+        {{ principalName }}
+        <button @click="logIn()">Log In</button>
+      </div>
+      <div id="notes" v-for="note, idx in notes[0]" :key="idx">
+        <span>{{idx + 1 }}</span>: <span>{{ note }}</span>
+      </div>
+      <div id="add-note-container">
+        <textarea v-model="newNote" placeholder="Add new note..."></textarea>
+        <button @click="addNote()">Add new note</button>
+      </div>
+      <div>
+        {{ newNote }}
+      </div>
+  </div>
   </main>
 </template>

@@ -6,6 +6,12 @@ use ic_cdk::caller;
 
 thread_local! {
     static NOTES: RefCell<HashMap<Principal, Vec<String>>> = RefCell::default();
+    static CHAT: RefCell<HashMap<[Principal; 2], Vec<String>>> = RefCell::default();
+}
+
+#[ic_cdk::query]
+fn get_chat(first_user: Principal, second_user: Principal) -> Option<Vec<String>> {
+    CHAT.with_borrow(|notes| notes.get(&[first_user, second_user]).cloned())
 }
 
 #[ic_cdk::query]
@@ -27,6 +33,28 @@ fn add_note(note: String) {
             notes_vec.push(note);
         } else {
             notes.insert(user, vec![note]);
+        }
+    })
+}
+
+#[ic_cdk::update]
+fn add_chat_message(message: String, user2: Principal) {
+    let user1 = caller();
+
+    if user1 == Principal::anonymous() {
+        panic!("User is anonymous Principal");
+    }
+
+    let mut principals = [user1, user2];
+    principals.sort();
+
+    CHAT.with_borrow_mut(|chats| {
+        let mut_chats = chats.get_mut(&principals);
+
+        if let Some(chat_messages) = mut_chats {
+            chat_messages.push(message);
+        } else {
+            chats.insert(principals, vec![message]);
         }
     })
 }

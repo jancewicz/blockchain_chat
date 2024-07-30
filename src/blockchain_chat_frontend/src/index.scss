@@ -35,3 +35,17 @@ button[type="submit"] {
 #greeting:empty {
   display: none;
 }
+
+#main-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  border: 2px;
+  border-color: black;
+}
+
+#add-note-container {
+  display: block;
+}
