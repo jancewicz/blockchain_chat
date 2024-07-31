@@ -27,6 +27,11 @@ fn register(nickname: String) {
     USERS.with_borrow_mut(|users| users.insert(user, UserData::new(nickname)));
 }
 
+#[ic_cdk::query]
+fn get_users() -> HashMap<Principal, UserData> {
+    USERS.with_borrow(|users| users.clone())
+}
+
 #[ic_cdk::update]
 fn add_chat_message(message: String, user2: Principal) {
     let user1 = caller();
