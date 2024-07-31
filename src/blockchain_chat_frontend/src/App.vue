@@ -3,6 +3,7 @@ import { blockchain_chat_backend, canisterId, createActor } from '../../declarat
 import { AuthClient } from '@dfinity/auth-client';
 import type { Identity } from '@dfinity/agent';
 import { Principal } from '@dfinity/principal';
+import type { UserData } from '../../declarations/blockchain_chat_backend/blockchain_chat_backend.did';
 
 export default {
   data() {
@@ -12,6 +13,7 @@ export default {
       identity: undefined as undefined | Identity,
       principal: undefined as undefined | Principal,
       targetPrincipal: "",
+      userData: undefined as undefined | UserData,
     }
   },
   methods: {
@@ -62,10 +64,23 @@ export default {
         identityProvider: "http://avqkn-guaaa-aaaaa-qaaea-cai.localhost:4943/",
         onSuccess: async () => {
           const identity = authClient.getIdentity();
-          this.principal = identity.getPrincipal();
+          const principal = identity.getPrincipal();
+          this.principal = principal;
           this.identity = identity;
+
+          const getUserData = await blockchain_chat_backend.get_user(principal);
+          !getUserData.length ? this.userData = undefined : this.userData = getUserData[0];
+          
         }
       })
+    },
+    async logOut() {
+      const authClient = await AuthClient.create();
+      await authClient.logout();
+      this.identity = undefined;
+      this.principal = undefined;
+      this.chats = [];
+      this.userData = undefined;
     }
   },
 }
@@ -73,13 +88,11 @@ export default {
 
 <template>
   <main>
-    <img src="/logo2.svg" alt="DFINITY logo" />
-    <br />
-    <br />
     <div id="main-container">
       <div id="log-in">
         {{ principal }}
-        <button @click="logIn()">Log In</button>
+        <button v-if="!principal" @click="logIn">Log In</button>
+        <button v-if="principal" @click="logOut">Log Out</button>
       </div>
       <div>
         <input v-model="targetPrincipal"  placeholder="download chat"><button @click="downloadChatMessages">Get chat</button>
