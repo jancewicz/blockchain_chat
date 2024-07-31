@@ -3,6 +3,7 @@ import { blockchain_chat_backend, canisterId, createActor } from '../../declarat
 import { AuthClient } from '@dfinity/auth-client';
 import type { Identity } from '@dfinity/agent';
 import { Principal } from '@dfinity/principal';
+import type { Principal as PrincipalType } from '@dfinity/principal';
 import type { UserData } from '../../declarations/blockchain_chat_backend/blockchain_chat_backend.did';
 
 export default {
@@ -11,9 +12,10 @@ export default {
       newMessage: "",
       chats: [] as string[][],
       identity: undefined as undefined | Identity,
-      principal: undefined as undefined | Principal,
+      principal: undefined as undefined | PrincipalType,
       targetPrincipal: "",
       userData: undefined as undefined | UserData,
+      newNickname: "",
     }
   },
   methods: {
@@ -58,6 +60,11 @@ export default {
       const chatPath = [identity.getPrincipal(), targetPrincipal].sort();
       this.chats = await blockchain_chat_backend.get_chat(chatPath);
     },
+    async getUserData() {
+      const {identity, principal} = this.isLogged();
+      const getUserData = await blockchain_chat_backend.get_user(principal as Principal);
+      !getUserData.length ? this.userData = undefined : this.userData = getUserData[0];
+    },
     async logIn(){
       const authClient = await AuthClient.create();
       await authClient.login({
@@ -68,9 +75,7 @@ export default {
           this.principal = principal;
           this.identity = identity;
 
-          const getUserData = await blockchain_chat_backend.get_user(principal);
-          !getUserData.length ? this.userData = undefined : this.userData = getUserData[0];
-          
+          await this.getUserData();
         }
       })
     },
@@ -81,7 +86,13 @@ export default {
       this.principal = undefined;
       this.chats = [];
       this.userData = undefined;
-    }
+    },
+    async registerNickname() {
+      const trimNickname = this.newNickname.trim();
+      const backend = this.getAuthClient();
+      await backend.register(trimNickname);
+      await this.getUserData();
+    },
   },
 }
 </script>
@@ -93,20 +104,27 @@ export default {
         {{ principal }}
         <button v-if="!principal" @click="logIn">Log In</button>
         <button v-if="principal" @click="logOut">Log Out</button>
+        <div v-if="principal && !userData">
+          <input v-model="newNickname" placeholder="Enter new nickname">
+         <button @click="registerNickname()">Register new nickname</button>
+        </div>
       </div>
-      <div>
-        <input v-model="targetPrincipal"  placeholder="download chat"><button @click="downloadChatMessages">Get chat</button>
+      <div v-if="principal && userData">
+        <div>
+          <input v-model="targetPrincipal"  placeholder="download chat"><button @click="downloadChatMessages">Get chat</button>
+        </div>
+        <div id="notes" v-for="chat, idx in chats[0]" :key="idx">
+          <span>{{idx + 1 }}</span>: <span>{{ chat }}</span>
+        </div>
+        <div id="add-note-container">
+          <textarea v-model="newMessage" placeholder="Add new message..."></textarea>
+          <button @click="addChatMessage()">Add new message</button>
+        </div>
+        <div>
+          {{ newMessage }}
+        </div>
       </div>
-      <div id="notes" v-for="chat, idx in chats[0]" :key="idx">
-        <span>{{idx + 1 }}</span>: <span>{{ chat }}</span>
-      </div>
-      <div id="add-note-container">
-        <textarea v-model="newMessage" placeholder="Add new message..."></textarea>
-        <button @click="addChatMessage()">Add new message</button>
-      </div>
-      <div>
-        {{ newMessage }}
-      </div>
+      
   </div>
   </main>
 </template>
