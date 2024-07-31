@@ -8,7 +8,6 @@ service : {
     "get_notes" : (principal) -> (opt vec text) query;
     "register" : (text) -> ();
     "add_chat_message" : (text, principal) -> ();
-    "get_user" : (principal) -> opt UserData;
+    "get_user" : (principal) -> (opt UserData);
     "get_users" : () -> (vec record { principal; UserData });
-
 };
