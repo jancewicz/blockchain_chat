@@ -16,6 +16,7 @@ export default {
       targetPrincipal: "",
       userData: undefined as undefined | UserData,
       newNickname: "",
+      allUsers: [] as [Principal, UserData][],
     }
   },
   methods: {
@@ -74,8 +75,8 @@ export default {
           const principal = identity.getPrincipal();
           this.principal = principal;
           this.identity = identity;
-
           await this.getUserData();
+          await this.getUserList();
         }
       })
     },
@@ -92,7 +93,11 @@ export default {
       const backend = this.getAuthClient();
       await backend.register(trimNickname);
       await this.getUserData();
+      await this.getUserList();
     },
+    async getUserList() {
+      this.allUsers = await blockchain_chat_backend.get_users()
+    }
   },
 }
 </script>
@@ -110,6 +115,13 @@ export default {
         </div>
       </div>
       <div v-if="principal && userData">
+        <h4>{{ userData.nickname }}</h4>
+        <div v-if="allUsers">
+          <select v-model="targetPrincipal">
+            <option disabled value="">Choose friend</option>
+            <option v-for="[userPrincipal, userData] in allUsers" :value="userPrincipal.toText()">{{ userData.nickname }}</option>
+          </select>
+        </div>
         <div>
           <input v-model="targetPrincipal"  placeholder="download chat"><button @click="downloadChatMessages">Get chat</button>
         </div>
