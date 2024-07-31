@@ -32,6 +32,11 @@ fn get_users() -> HashMap<Principal, UserData> {
     USERS.with_borrow(|users| users.clone())
 }
 
+#[ic_cdk::query]
+fn get_user(user: Principal) -> Option<UserData> {
+    USERS.with_borrow(|users: &HashMap<Principal, UserData>| users.get(&user).cloned())
+}
+
 #[ic_cdk::update]
 fn add_chat_message(message: String, user2: Principal) {
     let user1 = caller();
